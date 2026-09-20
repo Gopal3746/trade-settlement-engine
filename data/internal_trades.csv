@@ -1,0 +1,6 @@
+trade_id,source,symbol,side,quantity,price,trade_date,settlement_date,broker,account,currency
+TRD-1001,internal,AAPL,BUY,100,225.50,2026-09-18,2026-09-21,Broker A,ACC-001,USD
+TRD-1002,internal,MSFT,BUY,200,510.25,2026-09-18,2026-09-21,Broker A,ACC-001,USD
+TRD-1003,internal,NVDA,SELL,75,174.80,2026-09-18,2026-09-21,Broker B,ACC-002,USD
+TRD-1004,internal,GOOG,BUY,50,245.10,2026-09-18,2026-09-21,Broker B,ACC-002,USD
+TRD-1005,internal,AMZN,SELL,120,231.40,2026-09-18,2026-09-21,Broker C,ACC-003,USD
