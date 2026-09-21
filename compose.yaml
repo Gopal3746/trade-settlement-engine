@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: trade-recon-postgres
+
+    environment:
+      POSTGRES_DB: trade_recon
+      POSTGRES_USER: trade_user
+      POSTGRES_PASSWORD: trade_pass
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - trade_recon_postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U trade_user -d trade_recon",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  trade_recon_postgres_data:
