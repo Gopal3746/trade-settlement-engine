@@ -1,6 +1,13 @@
 from sqlalchemy.orm import Session
 
-from trade_recon.database import create_db_engine
+from trade_recon.database import (
+    create_db_engine,
+    create_schema,
+)
+from trade_recon.exception_repository import (
+    ExceptionRepository,
+)
+from trade_recon.exceptions import exceptions_from_result
 from trade_recon.models import TradeSource
 from trade_recon.reconciliation import reconcile_trades
 from trade_recon.repository import TradeRepository
@@ -8,22 +15,38 @@ from trade_recon.repository import TradeRepository
 
 def main() -> None:
     engine = create_db_engine()
+    create_schema(engine)
 
     with Session(engine) as session:
-        repository = TradeRepository(session)
+        trade_repository = TradeRepository(session)
 
-        internal_trades = repository.get_by_source(
+        internal_trades = trade_repository.get_by_source(
             TradeSource.INTERNAL
         )
 
-        broker_trades = repository.get_by_source(
+        broker_trades = trade_repository.get_by_source(
             TradeSource.BROKER
         )
 
-    results = reconcile_trades(
-        internal_trades,
-        broker_trades,
-    )
+        results = reconcile_trades(
+            internal_trades,
+            broker_trades,
+        )
+
+        exception_repository = ExceptionRepository(
+            session
+        )
+
+        new_exception_count = 0
+
+        for result in results:
+            new_exception_count += (
+                exception_repository.add_many(
+                    exceptions_from_result(result)
+                )
+            )
+
+        session.commit()
 
     print(
         f"{'TRADE ID':<12}"
@@ -46,6 +69,12 @@ def main() -> None:
             f"{symbol:<10}"
             f"{result.status}"
         )
+
+    print()
+    print(
+        f"Recorded {new_exception_count} "
+        "new open exceptions."
+    )
 
 
 if __name__ == "__main__":

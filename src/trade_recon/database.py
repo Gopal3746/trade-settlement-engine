@@ -1,9 +1,10 @@
 import os
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     Date,
+    DateTime,
     Integer,
     Numeric,
     String,
@@ -102,6 +103,58 @@ class TradeRecord(Base):
         nullable=False,
     )
 
+class ReconciliationExceptionRecord(Base):
+    __tablename__ = "reconciliation_exceptions"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    trade_id: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        index=True,
+    )
+
+    break_type: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        index=True,
+    )
+
+    field_name: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+    )
+
+    internal_value: Mapped[str | None] = mapped_column(
+        String(256),
+        nullable=True,
+    )
+
+    broker_value: Mapped[str | None] = mapped_column(
+        String(256),
+        nullable=True,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        index=True,
+    )
+
+    detected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+
+    resolved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
 def get_database_url() -> str:
     return os.getenv(
