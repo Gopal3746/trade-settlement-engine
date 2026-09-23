@@ -5,6 +5,10 @@ from trade_recon.ingestion import (
     parse_trade_row,
 )
 from trade_recon.models import Side, Trade, TradeSource
+from trade_recon.position_reconciliation import (
+    PositionBreak,
+    reconcile_positions,
+)
 from trade_recon.reconciliation import (
     BreakType,
     ReconciliationResult,
@@ -14,6 +18,7 @@ from trade_recon.reconciliation import (
 __all__ = [
     "BreakType",
     "IngestionResult",
+    "PositionBreak",
     "ReconciliationResult",
     "RejectedTradeRow",
     "Side",
@@ -21,6 +26,7 @@ __all__ = [
     "TradeSource",
     "load_trades_csv",
     "parse_trade_row",
+    "reconcile_positions",
     "reconcile_trades",
 ]
 
