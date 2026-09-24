@@ -2,60 +2,57 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
+from trade_recon.batch_ingestion import (
+    BatchIngestionResult,
+    ingest_trade_file,
+)
 from trade_recon.database import (
     create_db_engine,
     create_schema,
 )
-from trade_recon.ingestion import load_trades_csv
-from trade_recon.repository import TradeRepository
+from trade_recon.models import TradeSource
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _print_result(
+    result: BatchIngestionResult,
+) -> None:
+    print(
+        f"{result.source.value}: "
+        f"read={result.rows_read}, "
+        f"inserted={result.rows_inserted}, "
+        f"duplicates="
+        f"{result.rows_skipped_duplicate}, "
+        f"rejected={result.rows_rejected}"
+    )
+
+
 def main() -> None:
     engine = create_db_engine()
-
     create_schema(engine)
 
-    internal_result = load_trades_csv(
-        PROJECT_ROOT
-        / "data"
-        / "internal_trades.csv"
-    )
-
-    broker_result = load_trades_csv(
-        PROJECT_ROOT
-        / "data"
-        / "broker_trades.csv"
-    )
-
-    if internal_result.rejected_rows:
-        raise RuntimeError(
-            "internal trade file contains rejected rows"
-        )
-
-    if broker_result.rejected_rows:
-        raise RuntimeError(
-            "broker trade file contains rejected rows"
-        )
-
     with Session(engine) as session:
-        repository = TradeRepository(session)
-
-        internal_count = repository.add_many(
-            internal_result.trades
+        internal_result = ingest_trade_file(
+            session,
+            PROJECT_ROOT
+            / "data"
+            / "internal_trades.csv",
+            TradeSource.INTERNAL,
         )
 
-        broker_count = repository.add_many(
-            broker_result.trades
+        broker_result = ingest_trade_file(
+            session,
+            PROJECT_ROOT
+            / "data"
+            / "broker_trades.csv",
+            TradeSource.BROKER,
         )
 
         session.commit()
 
-    print(
-        f"Loaded {internal_count} internal trades "
-        f"and {broker_count} broker trades."
-    )
+    _print_result(internal_result)
+    _print_result(broker_result)
 
 
 if __name__ == "__main__":

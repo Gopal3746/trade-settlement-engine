@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
 from trade_recon.database import TradeRecord
@@ -83,3 +83,54 @@ class TradeRepository:
             account=record.account,
             currency=record.currency,
         )
+
+    def add_many_idempotent(
+        self,
+        trades: Iterable[Trade],
+    ) -> tuple[int, int]:
+        trade_list = list(trades)
+
+        if not trade_list:
+            return 0, 0
+
+        incoming_keys = {
+            (
+                trade.trade_id,
+                trade.source.value,
+            )
+            for trade in trade_list
+        }
+
+        statement = select(
+            TradeRecord.trade_id,
+            TradeRecord.source,
+        ).where(
+            tuple_(
+                TradeRecord.trade_id,
+                TradeRecord.source,
+            ).in_(incoming_keys)
+        )
+
+        existing_keys = set(
+            self._session.execute(statement).all()
+        )
+
+        inserted = 0
+        skipped_duplicate = 0
+
+        for trade in trade_list:
+            key = (
+                trade.trade_id,
+                trade.source.value,
+            )
+
+            if key in existing_keys:
+                skipped_duplicate += 1
+                continue
+
+            self.add(trade)
+
+            existing_keys.add(key)
+            inserted += 1
+
+        return inserted, skipped_duplicate

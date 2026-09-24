@@ -156,6 +156,58 @@ class ReconciliationExceptionRecord(Base):
         nullable=True,
     )
 
+class IngestionBatchRecord(Base):
+    __tablename__ = "ingestion_batches"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    source_file: Mapped[str] = mapped_column(
+        String(256),
+        nullable=False,
+    )
+
+    source: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        index=True,
+    )
+
+    file_sha256: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        index=True,
+    )
+
+    rows_read: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    rows_inserted: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    rows_skipped_duplicate: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    rows_rejected: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    completed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+
 def get_database_url() -> str:
     return os.getenv(
         "DATABASE_URL",
