@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+jobs:
+  quality:
+    name: Tests and lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run tests
+        run: python -m pytest
+
+      - name: Run Ruff
+        run: python -m ruff check .
+
+  postgres-integration:
+    name: PostgreSQL integration
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+
+        env:
+          POSTGRES_DB: trade_recon
+          POSTGRES_USER: trade_user
+          POSTGRES_PASSWORD: trade_pass
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd
+          "pg_isready -U trade_user -d trade_recon"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: >-
+        postgresql+psycopg://trade_user:trade_pass@localhost:5432/trade_recon
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Load sample trades
+        run: python -m trade_recon.load_data
+
+      - name: Run trade reconciliation
+        run: python -m trade_recon.run_reconciliation
+
+      - name: Run position reconciliation
+        run: |
+          python -m trade_recon.run_position_reconciliation
+
+      - name: Generate operational report
+        run: |
+          python -m trade_recon.run_operational_report
+
+      - name: Verify PostgreSQL state
+        run: |
+          python - <<'PY'
+          from sqlalchemy import text
+
+          from trade_recon.database import create_db_engine
+
+          engine = create_db_engine()
+
+          with engine.connect() as connection:
+              trade_count = connection.scalar(
+                  text("SELECT COUNT(*) FROM trades")
+              )
+
+              open_exception_count = connection.scalar(
+                  text(
+                      """
+                      SELECT COUNT(*)
+                      FROM reconciliation_exceptions
+                      WHERE status = 'OPEN'
+                      """
+                  )
+              )
+
+          assert trade_count == 10
+          assert open_exception_count == 5
+
+          print("PostgreSQL integration checks passed.")
+          PY
