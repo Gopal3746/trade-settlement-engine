@@ -1,3 +1,7 @@
+from trade_recon.exception_sync import (
+    ExceptionSyncResult,
+    sync_reconciliation_exceptions,
+)
 from trade_recon.ingestion import (
     IngestionResult,
     RejectedTradeRow,
@@ -24,6 +28,7 @@ from trade_recon.reporting import (
 
 __all__ = [
     "BreakType",
+    "ExceptionSyncResult",
     "IngestionResult",
     "OpenExceptionDetail",
     "OperationalReport",
@@ -39,6 +44,7 @@ __all__ = [
     "parse_trade_row",
     "reconcile_positions",
     "reconcile_trades",
+    "sync_reconciliation_exceptions",
     "write_open_exceptions_csv",
 ]
 

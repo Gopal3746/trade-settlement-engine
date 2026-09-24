@@ -94,15 +94,21 @@ class ExceptionRepository:
         trade_id: str,
         break_type: BreakType,
     ) -> bool:
-        statement = select(
-            ReconciliationExceptionRecord
-        ).where(
-            ReconciliationExceptionRecord.trade_id
-            == trade_id,
-            ReconciliationExceptionRecord.break_type
-            == break_type.value,
-            ReconciliationExceptionRecord.status
-            == ExceptionStatus.OPEN.value,
+        statement = (
+            select(
+                ReconciliationExceptionRecord
+            )
+            .where(
+                ReconciliationExceptionRecord.trade_id
+                == trade_id,
+                ReconciliationExceptionRecord.break_type
+                == break_type.value,
+                ReconciliationExceptionRecord.status
+                == ExceptionStatus.OPEN.value,
+            )
+            .order_by(
+                ReconciliationExceptionRecord.detected_at
+            )
         )
 
         record = self._session.scalars(

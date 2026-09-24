@@ -4,10 +4,9 @@ from trade_recon.database import (
     create_db_engine,
     create_schema,
 )
-from trade_recon.exception_repository import (
-    ExceptionRepository,
+from trade_recon.exception_sync import (
+    sync_reconciliation_exceptions,
 )
-from trade_recon.exceptions import exceptions_from_result
 from trade_recon.models import TradeSource
 from trade_recon.reconciliation import reconcile_trades
 from trade_recon.repository import TradeRepository
@@ -18,14 +17,20 @@ def main() -> None:
     create_schema(engine)
 
     with Session(engine) as session:
-        trade_repository = TradeRepository(session)
-
-        internal_trades = trade_repository.get_by_source(
-            TradeSource.INTERNAL
+        trade_repository = TradeRepository(
+            session
         )
 
-        broker_trades = trade_repository.get_by_source(
-            TradeSource.BROKER
+        internal_trades = (
+            trade_repository.get_by_source(
+                TradeSource.INTERNAL
+            )
+        )
+
+        broker_trades = (
+            trade_repository.get_by_source(
+                TradeSource.BROKER
+            )
         )
 
         results = reconcile_trades(
@@ -33,18 +38,12 @@ def main() -> None:
             broker_trades,
         )
 
-        exception_repository = ExceptionRepository(
-            session
-        )
-
-        new_exception_count = 0
-
-        for result in results:
-            new_exception_count += (
-                exception_repository.add_many(
-                    exceptions_from_result(result)
-                )
+        sync_result = (
+            sync_reconciliation_exceptions(
+                session,
+                results,
             )
+        )
 
         session.commit()
 
@@ -71,9 +70,15 @@ def main() -> None:
         )
 
     print()
+
     print(
-        f"Recorded {new_exception_count} "
-        "new open exceptions."
+        f"Opened {sync_result.opened} "
+        "new exceptions."
+    )
+
+    print(
+        f"Resolved {sync_result.resolved} "
+        "existing exceptions."
     )
 
 
